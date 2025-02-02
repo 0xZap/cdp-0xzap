@@ -36,6 +36,9 @@ export function ChatMessage({ message, actions, onActionClick, isParsing, isLoad
             fromToken={message.parsedData.fromToken!}
             toToken={message.parsedData.toToken!}
             amount={message.parsedData.amount!}
+            onConfirm={() => {
+              onActionClick?.("confirm_transfer");
+            }}
           />
         )
       case "sentiment":

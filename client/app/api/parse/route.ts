@@ -34,7 +34,7 @@ Analyze the message and return a JSON object with this structure:
 }
 
 Rules:
-1. If the message discusses transferring tokens/currency, use type: "transfer". Also, you must always ask the user to confirm the transfer.
+1. If the message discusses transferring tokens/currency, use type: "transfer". For this type, you MUST NOT include any actions.
 2. If the message analyzes sentiment/opinion about a topic, use type: "sentiment"
 3. For all other messages, use type: "standard"
 4. Include actions array only if user interaction is needed
