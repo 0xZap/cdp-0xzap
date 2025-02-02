@@ -44,10 +44,25 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! How can I assist you today?",
       role: "assistant",
+      content: `**Hello!** I'm your specialized assistant, here to help with a variety of tasks:
+
+- **General Questions**  
+  Ask me anything! From coding tips to trivia, I can offer insights and explanations.
+
+- **Token Transfers**  
+  Need to move tokens or currencies? I can handle the details—just let me know your source token, destination token, and amount.
+
+- **Sentiment Analysis**  
+  Curious about how optimistic or pessimistic your idea might sound? I can gauge the sentiment and present it on a scale from very negative to very positive.
+
+- **Suggestions & Confirmations**  
+  I can also suggest next steps, confirm actions, or present clickable options to guide the conversation.
+
+Just let me know what you'd like to do, and I'll take care of the rest!`
     },
   ]);
+
   const [messageActions, setMessageActions] = useState<
     Record<string, MessageActions>
   >({

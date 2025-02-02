@@ -1,33 +1,40 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Coins } from "lucide-react"
+import { User, Coins, ArrowRight } from "lucide-react"
 import { SwipeToConfirm } from "@/components/ui/swipe-to-confirm"
 
 interface TransferMessageProps {
-  fromToken: string
-  toToken: string
+  recipientAddress: string
+  token: string
   amount: string
   onConfirm?: () => void
 }
 
-export function TransferMessage({ fromToken, toToken, amount, onConfirm }: TransferMessageProps) {
+export function TransferMessage({ recipientAddress, token, amount, onConfirm }: TransferMessageProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Transfer Details */}
-      <div className="flex items-center gap-4 p-3 rounded-xl bg-zinc-800/50">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 font-medium border border-blue-500/20">
-            {fromToken}
-          </div>
-          <ArrowRight className="h-5 w-5 text-zinc-500" />
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-500/10 text-green-400 font-medium border border-green-500/20">
-            {toToken}
+      <div className="flex flex-col gap-3 p-4 rounded-xl bg-zinc-800/50">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-zinc-400">To Address</span>
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-zinc-500" />
+            <code className="text-sm font-medium text-zinc-300 bg-zinc-900/50 px-2 py-1 rounded">
+              {recipientAddress.slice(0, 6)}...{recipientAddress.slice(-4)}
+            </code>
           </div>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50">
-          <Coins className="h-4 w-4 text-zinc-400" />
-          <span className="font-medium text-white">{amount}</span>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-zinc-400">Amount</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50">
+              <span className="font-medium text-blue-400">{token}</span>
+              <ArrowRight className="h-4 w-4 text-zinc-500" />
+              <span className="font-medium text-white">{amount}</span>
+            </div>
+          </div>
         </div>
       </div>
 

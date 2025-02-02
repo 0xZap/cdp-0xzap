@@ -3,91 +3,129 @@ import { NextResponse } from 'next/server';
 import { MessageActions } from '@/types/chat';
 import { z } from 'zod';
 
-const SYSTEM_PROMPT = `You are an AI that analyzes messages to determine:
-1. If they contain special UI elements (transfer or sentiment analysis)
-2. What actions (if any) should be presented to the user
+const SYSTEM_PROMPT = `
+  You are an AI that categorizes a given message into one of the following types, then returns a JSON object strictly matching the specified structure:
 
-Analyze the message and return a JSON object with this structure:
 {
-  "type": "standard" | "transfer" | "sentiment",
-  
-  // For standard messages:
-  "content": "original message text",
-  
-  // For transfer messages:
-  "fromToken": "token symbol",
-  "toToken": "token symbol",
-  "amount": "transfer amount",
-  
-  // For sentiment messages:
-  "topic": "what is being analyzed",
-  "sentimentLevel": number between 0 and 1,
-  
-  // Optional actions array for any message type:
+  "type": "standard" | "transfer" | "swap" | "sentiment" | "faucet",
+
+  // For "standard":
+  "content": string, // The original text if no special type is detected
   "actions": [
+    // optional if suggestions/buttons are relevant
     {
       "type": "suggestions",
-      "items": ["suggestion 1", "suggestion 2"]
-    }
-    // ... other action types
-  ]
-}
+      "items": ["string", "string"]
+    },
+    ...
+  ],
 
-Rules:
-1. If the message discusses transferring tokens/currency, use type: "transfer". For this type, you MUST NOT include any actions.
-2. If the message analyzes sentiment/opinion about a topic, use type: "sentiment"
-3. For all other messages, use type: "standard"
-4. Include actions array only if user interaction is needed
-5. Return valid JSON only, no additional text or code blocks
+  // For "transfer":
+  "recipientAddress": string, // e.g. 0x742d...
+  "token": string,           // e.g. ETH
+  "amount": string,          // e.g. "0.1"
 
-Example responses:
-1. Transfer message:
-{
-  "type": "transfer",
-  "fromToken": "ETH",
-  "toToken": "USDC",
-  "amount": "100",
+  // For "swap":
+  "fromToken": string,  // e.g. ETH
+  "toToken": string,    // e.g. USDC
+  "swapAmount": string, // e.g. "0.1"
+
+  // For "sentiment":
+  "topic": string,            // e.g. "stock market outlook"
+  "sentimentLevel": number,   // 0.0 = very pessimistic, 1.0 = very optimistic
+
+  // For "faucet":
+  "tokenSymbol": string,  // e.g. "ETH"
+  "faucetAmount": string, // e.g. "1"
+  "txHash": string,       // e.g. "0xabc123..." if known
+
+  // For any type:
   "actions": [
     {
       "type": "button",
-      "label": "Confirm Transfer",
-      "action": "confirm_transfer",
-      "variant": "primary"
-    }
-  ]
-}
-
-2. Sentiment message:
-{
-  "type": "sentiment",
-  "topic": "Project Proposal",
-  "sentimentLevel": 0.8,
-  "actions": [
+      "label": string,
+      "action": string,
+      "variant": "default" | "primary" | "destructive" | "ghost"
+    },
     {
       "type": "suggestions",
-      "items": ["Tell me more about the positive aspects", "What are the risks?"]
+      "items": [string, string, ...]
+    },
+    {
+      "type": "confirm",
+      "title": string,
+      "description": string,
+      "confirmLabel": string,
+      "cancelLabel": string
     }
   ]
 }
 
-3. Standard message:
-{
-  "type": "standard",
-  "content": "Original message text",
-  "actions": []
-}`;
+## Detection Rules
+
+1. **Transfer Messages**  
+   - Mentions “send” or “transfer.”  
+   - Contains a valid Ethereum address (0x...) for the recipient.  
+   - Specifies a token symbol (e.g., ETH, USDC, DAI) and an amount (e.g., “0.1”).  
+   - Use "type": "transfer" and fill "recipientAddress", "token", "amount".  
+   - *No additional actions* in "actions" (the UI uses swipe).
+
+2. **Swap Messages**  
+   - Mentions “swap,” “exchange,” or “trade.”  
+   - Involves two different tokens (e.g., ETH to USDC).  
+   - Specifies an amount to swap.  
+   - Use "type": "swap" and fill "fromToken", "toToken", "swapAmount".  
+   - *No additional actions* in "actions" (the UI uses swipe).
+
+3. **Sentiment Messages**  
+   - Indicates analyzing how positive/negative a topic is.  
+   - Provide "topic" (short descriptor) and a float "sentimentLevel" from 0.0 (very pessimistic) to 1.0 (very optimistic).  
+   - Use "type": "sentiment".  
+   - May include optional suggestions or confirm actions in "actions".
+
+4. **Faucet Messages**  
+   - Mentions requesting tokens from a “faucet,” e.g., “I need 1 ETH from a faucet.”  
+   - Use "type": "faucet" with "tokenSymbol" and "faucetAmount".  
+   - Optionally include a “txHash” if relevant.  
+   - Additional actions can be included if user interaction is needed.
+
+5. **Standard Messages**  
+   - If none of the above categories apply, use "type": "standard" and include "content" with the original text.  
+   - You may add suggestions or confirm actions in "actions" if helpful.
+
+## Additional Requirements
+
+- **Valid JSON Only**: No code blocks, no extra commentary or text.  
+- **Don’t Generate Extra Fields**: Strictly follow the defined keys.  
+- **Action Constraints**: 
+  - *Transfer/Swap* messages should have an empty "actions" array—because they use a “swipe” UI flow.  
+  - *Standard/Sentiment/Faucet* can include suggestions, buttons, or confirm actions if needed.  
+- **Extract Exact Amounts/Tokens**: If the user says “0.1 ETH,” keep it as "0.1" and "ETH".  
+- **Faucet**: If user specifically requests funds from a faucet, parse as "faucet".  
+- **Sentiment**: If user wants positivity/negativity analysis, parse as "sentiment" with a "sentimentLevel" float.  
+
+Return **exactly one** JSON object. 
+`;
 
 const messageSchema = z.object({
-  type: z.enum(["standard", "transfer", "sentiment"]),
+  type: z.enum(["standard", "transfer", "swap", "sentiment", "faucet"]),
   // Standard message
   content: z.string().optional(),
   // Transfer message
+  recipientAddress: z.string().optional(),
+  token: z.string().optional(),
+  amount: z.string().optional(),
+  // Swap message
   fromToken: z.string().optional(),
   toToken: z.string().optional(),
-  amount: z.string().optional(),
+  swapAmount: z.string().optional(),
   // Sentiment message
   topic: z.string().optional(),
   sentimentLevel: z.number().optional(),
+  // Faucet message
+  tokenSymbol: z.string().optional(),
+  faucetAmount: z.string().optional(),
+  txHash: z.string().optional(),
   // Actions
   actions: z.array(
     z.union([
