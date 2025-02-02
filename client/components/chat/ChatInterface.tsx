@@ -112,7 +112,7 @@ export function ChatInterface() {
         </div>
       </ScrollArea>
 
-      <div className="border-t border-zinc-800 bg-zinc-950 p-4">
+      <div className="p-4">
         <div className="mx-auto max-w-3xl space-y-4">
           <ChatInput
             value={input}
@@ -120,21 +120,6 @@ export function ChatInterface() {
             onSubmit={handleSubmit}
             isLoading={isLoading}
           />
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <Select defaultValue="gpt-3.5">
-              <SelectTrigger className="h-8 w-[180px] border-zinc-800 bg-zinc-900">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-zinc-800 bg-zinc-900">
-                {models.map((model) => (
-                  <SelectItem key={model.id} value={model.id} className="text-zinc-100">
-                    {model.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p>AI can make mistakes. Consider checking important information.</p>
-          </div>
         </div>
       </div>
     </div>

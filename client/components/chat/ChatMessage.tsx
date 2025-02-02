@@ -17,6 +17,47 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, actions, onActionClick, isParsing, isLoading, error }: ChatMessageProps) {
+  const renderContent = (content: string) => (
+    <ReactMarkdown
+      className="prose prose-invert max-w-none"
+      components={{
+        code({ inline, className, children, ...props } : any) {
+          const match = /language-(\w+)/.exec(className || "")
+          return !inline && match ? (
+            <SyntaxHighlighter
+              style={oneDark}
+              language={match[1]}
+              PreTag="div"
+              className="rounded-lg !bg-zinc-950/50 !mt-4 !mb-4 shadow-lg"
+            >
+              {String(children).replace(/\n$/, "")}
+            </SyntaxHighlighter>
+          ) : (
+            <code {...props} className={cn("rounded-md bg-zinc-900/50 px-1.5 py-0.5 shadow-sm", className)}>
+              {children}
+            </code>
+          )
+        },
+        p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>,
+        ul: ({ children }) => <ul className="mb-4 list-disc pl-4 last:mb-0 space-y-2">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-4 list-decimal pl-4 last:mb-0 space-y-2">{children}</ol>,
+        li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+        a: ({ children, href }) => (
+          <a
+            href={href}
+            className="text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {children}
+          </a>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+
   return (
     <div
       className={cn(
@@ -47,48 +88,9 @@ export function ChatMessage({ message, actions, onActionClick, isParsing, isLoad
             message.role === "user" ? "rounded-tr-sm" : "rounded-tl-sm",
           )}
         >
-          {message.role === "user" ? (
-            message.content
-          ) : (
+          {renderContent(message.content)}
+          {message.role === "assistant" && (
             <>
-              <ReactMarkdown
-                className="prose prose-invert max-w-none"
-                components={{
-                  code({ inline, className, children, ...props } : any) {
-                    const match = /language-(\w+)/.exec(className || "")
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={oneDark}
-                        language={match[1]}
-                        PreTag="div"
-                        className="rounded-lg !bg-zinc-950/50 !mt-4 !mb-4 shadow-lg"
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code {...props} className={cn("rounded-md bg-zinc-900/50 px-1.5 py-0.5 shadow-sm", className)}>
-                        {children}
-                      </code>
-                    )
-                  },
-                  p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>,
-                  ul: ({ children }) => <ul className="mb-4 list-disc pl-4 last:mb-0 space-y-2">{children}</ul>,
-                  ol: ({ children }) => <ol className="mb-4 list-decimal pl-4 last:mb-0 space-y-2">{children}</ol>,
-                  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                  a: ({ children, href }) => (
-                    <a
-                      href={href}
-                      className="text-blue-400 hover:text-blue-300 hover:underline transition-colors"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {children}
-                    </a>
-                  ),
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
               {isLoading && (
                 <div className="flex items-center gap-2 mt-3 border-t border-zinc-700/50 pt-3 text-zinc-400">
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -116,6 +118,6 @@ export function ChatMessage({ message, actions, onActionClick, isParsing, isLoad
         )}
       </div>
     </div>
-  )
+  );
 }
 
