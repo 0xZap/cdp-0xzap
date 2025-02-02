@@ -11,6 +11,8 @@ import { SentimentMessage } from "./message-types/SentimentMessage"
 import { useState } from "react"
 import { Button } from "../ui/button"
 import { FileText, LayoutTemplate } from "lucide-react"
+import { FaucetMessage } from "./message-types/FaucetMessage"
+import { SwapMessage } from "./message-types/SwapMessage"
 
 interface ChatMessageProps {
   message: Message
@@ -33,11 +35,22 @@ export function ChatMessage({ message, actions, onActionClick, isParsing, isLoad
       case "transfer":
         return (
           <TransferMessage
-            fromToken={message.parsedData.fromToken!}
-            toToken={message.parsedData.toToken!}
+            recipientAddress={message.parsedData.recipientAddress!}
+            token={message.parsedData.token!}
             amount={message.parsedData.amount!}
             onConfirm={() => {
               onActionClick?.("confirm_transfer");
+            }}
+          />
+        )
+      case "swap":
+        return (
+          <SwapMessage
+            fromToken={message.parsedData.fromToken!}
+            toToken={message.parsedData.toToken!}
+            amount={message.parsedData.swapAmount!}
+            onConfirm={() => {
+              onActionClick?.("confirm_swap");
             }}
           />
         )
@@ -46,6 +59,14 @@ export function ChatMessage({ message, actions, onActionClick, isParsing, isLoad
           <SentimentMessage
             topic={message.parsedData.topic!}
             sentimentLevel={message.parsedData.sentimentLevel!}
+          />
+        )
+      case "faucet":
+        return (
+          <FaucetMessage
+            tokenSymbol={message.parsedData.tokenSymbol!}
+            faucetAmount={message.parsedData.faucetAmount!}
+            txHash={message.parsedData.txHash}
           />
         )
       default:
