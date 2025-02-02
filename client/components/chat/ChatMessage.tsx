@@ -6,6 +6,11 @@ import ReactMarkdown from "react-markdown"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism"
 import { Loader2 } from "lucide-react"
+import { TransferMessage } from "./message-types/TransferMessage"
+import { SentimentMessage } from "./message-types/SentimentMessage"
+import { useState } from "react"
+import { Button } from "../ui/button"
+import { FileText, LayoutTemplate } from "lucide-react"
 
 interface ChatMessageProps {
   message: Message
@@ -17,6 +22,34 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, actions, onActionClick, isParsing, isLoading, error }: ChatMessageProps) {
+  const [showSpecialView, setShowSpecialView] = useState(true)
+  
+  const renderSpecializedContent = () => {
+    if (!message.parsedData || message.parsedData.type === "standard") {
+      return renderContent(message.content)
+    }
+
+    switch (message.parsedData.type) {
+      case "transfer":
+        return (
+          <TransferMessage
+            fromToken={message.parsedData.fromToken!}
+            toToken={message.parsedData.toToken!}
+            amount={message.parsedData.amount!}
+          />
+        )
+      case "sentiment":
+        return (
+          <SentimentMessage
+            topic={message.parsedData.topic!}
+            sentimentLevel={message.parsedData.sentimentLevel!}
+          />
+        )
+      default:
+        return renderContent(message.content)
+    }
+  }
+
   const renderContent = (content: string) => (
     <ReactMarkdown
       className="prose prose-invert max-w-none"
@@ -88,7 +121,29 @@ export function ChatMessage({ message, actions, onActionClick, isParsing, isLoad
             message.role === "user" ? "rounded-tr-sm" : "rounded-tl-sm",
           )}
         >
-          {renderContent(message.content)}
+          {message.parsedData && message.parsedData.type !== "standard" && (
+            <div className="flex justify-end mb-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setShowSpecialView(!showSpecialView)}
+              >
+                {showSpecialView ? (
+                  <>
+                    <FileText className="h-3.5 w-3.5 mr-1.5" />
+                    View as text
+                  </>
+                ) : (
+                  <>
+                    <LayoutTemplate className="h-3.5 w-3.5 mr-1.5" />
+                    View as template
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          {showSpecialView ? renderSpecializedContent() : renderContent(message.content)}
           {message.role === "assistant" && (
             <>
               {isLoading && (

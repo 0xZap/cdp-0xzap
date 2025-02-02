@@ -2,6 +2,24 @@ export interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
+  parsedData?: ParsedMessageData;
+}
+
+export type MessageType = "standard" | "transfer" | "sentiment";
+
+export interface ParsedMessageData {
+  type: MessageType;
+  // Standard message
+  content?: string;
+  // Transfer message
+  fromToken?: string;
+  toToken?: string;
+  amount?: string;
+  // Sentiment message
+  topic?: string;
+  sentimentLevel?: number;
+  // Actions (existing)
+  actions: ActionType[];
 }
 
 export interface ActionButton {

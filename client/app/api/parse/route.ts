@@ -3,87 +3,92 @@ import { NextResponse } from 'next/server';
 import { MessageActions } from '@/types/chat';
 import { z } from 'zod';
 
-const SYSTEM_PROMPT = 
-`You are an AI that analyzes an assistant's message to determine if any interactive UI actions should be presented to the user. Your output must be a valid JSON object matching this schema:
+const SYSTEM_PROMPT = `You are an AI that analyzes messages to determine:
+1. If they contain special UI elements (transfer or sentiment analysis)
+2. What actions (if any) should be presented to the user
 
+Analyze the message and return a JSON object with this structure:
 {
+  "type": "standard" | "transfer" | "sentiment",
+  
+  // For standard messages:
+  "content": "original message text",
+  
+  // For transfer messages:
+  "fromToken": "token symbol",
+  "toToken": "token symbol",
+  "amount": "transfer amount",
+  
+  // For sentiment messages:
+  "topic": "what is being analyzed",
+  "sentimentLevel": number between 0 and 1,
+  
+  // Optional actions array for any message type:
+  "actions": [
+    {
+      "type": "suggestions",
+      "items": ["suggestion 1", "suggestion 2"]
+    }
+    // ... other action types
+  ]
+}
+
+Rules:
+1. If the message discusses transferring tokens/currency, use type: "transfer". Also, you must always ask the user to confirm the transfer.
+2. If the message analyzes sentiment/opinion about a topic, use type: "sentiment"
+3. For all other messages, use type: "standard"
+4. Include actions array only if user interaction is needed
+5. Return valid JSON only, no additional text or code blocks
+
+Example responses:
+1. Transfer message:
+{
+  "type": "transfer",
+  "fromToken": "ETH",
+  "toToken": "USDC",
+  "amount": "100",
   "actions": [
     {
       "type": "button",
-      "label": string,
-      "action": string,
-      "variant": "default" | "primary" | "destructive" | "ghost" (optional)
-    }
-    OR
-    {
-      "type": "suggestions",
-      "items": string[]
-    }
-    OR
-    {
-      "type": "confirm",
-      "title": string,
-      "description": string,
-      "confirmLabel": string,
-      "cancelLabel": string
+      "label": "Confirm Transfer",
+      "action": "confirm_transfer",
+      "variant": "primary"
     }
   ]
 }
 
-## Important Rules
-
-1. **Return "actions": [] for simple, purely informational messages**  
-   - If no user interaction is needed, do not add buttons, suggestions, or confirms.  
-
-2. **Use "suggestions"** only if the message offers **up to four** distinct follow-up ideas or possible user replies.  
-   - Example: The assistant message proposes multiple topics or asks what the user wants to do next.  
-   - **Never include more than 4** items in the "items" array.
-
-3. **Use "button"** if the message presents an option to proceed or do something but does not explicitly ask for a yes/no confirmation.  
-   - Each "button" must have "label", "action", and optionally "variant".
-
-4. **Use "confirm"** if the user is prompted to confirm or cancel a single action (like “Are you sure?”).  
-   - Provide "title", "description", "confirmLabel", and "cancelLabel".
-
-5. **No extraneous keys**  
-   - Do not add additional fields besides those defined in the schema.  
-   - Do not wrap the JSON in code blocks or add extra text.
-
-6. **Output must be valid JSON only**  
-   - No explanations or disclaimers, no markdown, and no additional commentary.
-
-## Examples
-
-**1. If the assistant message includes multiple topic suggestions:**
+2. Sentiment message:
 {
-“actions”: [
-{
-“type”: “suggestions”,
-“items”: [“Option A”, “Option B”, “Option C”]
-}
-]
+  "type": "sentiment",
+  "topic": "Project Proposal",
+  "sentimentLevel": 0.8,
+  "actions": [
+    {
+      "type": "suggestions",
+      "items": ["Tell me more about the positive aspects", "What are the risks?"]
+    }
+  ]
 }
 
-**2. If the assistant message requires a yes/no style confirmation:**
+3. Standard message:
 {
-“actions”: [
-{
-“type”: “confirm”,
-“title”: “Confirm Deletion”,
-“description”: “Are you sure you want to delete this item?”,
-“confirmLabel”: “Yes, delete it”,
-“cancelLabel”: “No, keep it”
-}
-]
-}
-**3. If no further interaction is needed:**
-{
-“actions”: []
-}
-Always follow these rules strictly. Output **only** valid JSON following the schema above.
-`;
+  "type": "standard",
+  "content": "Original message text",
+  "actions": []
+}`;
 
-const actionSchema = z.object({
+const messageSchema = z.object({
+  type: z.enum(["standard", "transfer", "sentiment"]),
+  // Standard message
+  content: z.string().optional(),
+  // Transfer message
+  fromToken: z.string().optional(),
+  toToken: z.string().optional(),
+  amount: z.string().optional(),
+  // Sentiment message
+  topic: z.string().optional(),
+  sentimentLevel: z.number().optional(),
+  // Actions
   actions: z.array(
     z.union([
       z.object({
@@ -104,7 +109,7 @@ const actionSchema = z.object({
         cancelLabel: z.string()
       })
     ])
-  )
+  ).default([])
 });
 
 export async function POST(request: Request) {
@@ -125,33 +130,30 @@ export async function POST(request: Request) {
     console.log('OpenAI Response:', completion.choices[0].message.content);
     
     const rawResponse = JSON.parse(completion.choices[0].message.content || '');
+    console.log('Parsed Raw Response:', rawResponse);
     
-    // Transform the response to match our expected format
-    const parsedActions = {
-      actions: Array.isArray(rawResponse.actions) 
-        ? rawResponse.actions 
-        : [rawResponse.actions].filter(Boolean)
-    };
-
-    console.log('Transformed Actions:', parsedActions);
-    
-    const parsed = actionSchema.safeParse(parsedActions);
+    const parsed = messageSchema.safeParse(rawResponse);
     if (!parsed.success) {
-      console.error('Invalid actions format:', parsed.error);
+      console.error('Invalid message format:', parsed.error);
       return NextResponse.json({
         messageId,
-        actions: [] // Return empty actions on validation failure
+        type: "standard",
+        content: content,
+        actions: []
       });
     }
 
+    // Return the full parsed data including type and specialized fields
     return NextResponse.json({
       messageId,
-      actions: parsed.data.actions,
+      ...parsed.data
     });
   } catch (error) {
     console.error('[Parse API Error]:', error);
     return NextResponse.json({
       // messageId,
+      type: "standard",
+      content: "Error understanding message",
       actions: []
     });
   }

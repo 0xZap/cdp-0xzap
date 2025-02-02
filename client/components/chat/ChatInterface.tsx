@@ -35,7 +35,7 @@ export function ChatInterface() {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput(""); // Clear input field
+    setInput("");
     setIsLoading(true);
     setErrors({});
 
@@ -53,32 +53,57 @@ export function ChatInterface() {
       const aiMessage: Message = await response.json()
       setMessages(prev => [...prev, aiMessage])
 
-      // Parse the AI message for actions
+      // Parse the AI message for actions and special message types
       try {
-        const actions = await parseMessage(aiMessage.content, aiMessage.id)
-        if (actions) {
-          console.log('Setting actions for:', aiMessage.id, actions);
+        const parseResponse = await fetch("/api/parse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: aiMessage.content, messageId: aiMessage.id }),
+        });
+
+        if (!parseResponse.ok) {
+          throw new Error("Failed to parse message");
+        }
+
+        const parsedData = await parseResponse.json();
+        console.log('Parsed Data:', parsedData);
+
+        // Update the message with parsed data
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === aiMessage.id 
+              ? { ...msg, parsedData } 
+              : msg
+          )
+        );
+
+        // Also update message actions if present
+        if (parsedData.actions?.length > 0) {
           setMessageActions(prev => ({
             ...prev,
-            [aiMessage.id]: actions,
-          }))
+            [aiMessage.id]: {
+              messageId: aiMessage.id,
+              actions: parsedData.actions
+            }
+          }));
         }
       } catch (parseError) {
+        console.error("Parse error:", parseError);
         setErrors(prev => ({
           ...prev,
           [aiMessage.id]: "Failed to analyze message for actions"
-        }))
+        }));
       }
     } catch (error) {
       setErrors(prev => ({
         ...prev,
         general: "Failed to send message"
-      }))
-      console.error("Failed to send message:", error)
+      }));
+      console.error("Failed to send message:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleActionClick = async (action: string) => {
     // Extract the suggestion text without the prefix
@@ -101,7 +126,7 @@ export function ChatInterface() {
               actions={messageActions[message.id]}
               onActionClick={handleActionClick}
               isParsing={
-                !messageActions[message.id] && 
+                !message.parsedData &&
                 message.role === 'assistant' && 
                 message.id !== "1"
               }
