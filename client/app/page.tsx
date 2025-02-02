@@ -1,3 +1,13 @@
+        {/*
+"use client";
+
+import { ChatInterface } from "@/components/chat/ChatInterface";
+
+export default function Terminal() {
+  return <ChatInterface />;
+  */}
+
+
 // app/page.tsx
 import Link from "next/link";
 

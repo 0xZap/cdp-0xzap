@@ -60,7 +60,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
             ))}
           </nav>
 
-          <ScrollArea className="flex-1 px-2">
+          {/* <ScrollArea className="flex-1 px-2">
             <div className="space-y-1">
               {conversations.map((chat) => (
                 <Button
@@ -77,7 +77,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
                 </Button>
               ))}
             </div>
-          </ScrollArea>
+          </ScrollArea> */}
         </>
       )}
     </div>
