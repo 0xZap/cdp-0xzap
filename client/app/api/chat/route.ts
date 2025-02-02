@@ -36,6 +36,8 @@ Do NOT return JSON or code blocks here—just normal text. Our second-step servi
       role: "assistant",
     };
 
+    console.log("[Chat Response]", responseMessage);
+
     return NextResponse.json(responseMessage);
   } catch (error) {
     console.error("[Chat Error]", error);

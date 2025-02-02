@@ -10,7 +10,7 @@ export function ChatInterface() {
   // ───────────────────────────────────────────────────────────
   // 1. Hardcoded flow ID
   // ───────────────────────────────────────────────────────────
-  const HARDCODED_FLOW_ID = "cc8c7b1f-15d4-4ab3-90c4-6b84512f0cf6";
+  const HARDCODED_FLOW_ID = "08087dc4-1054-4b55-bfe8-f16ee2f2af54";
 
   // ───────────────────────────────────────────────────────────
   // 2. State for the flow data (fetched from /api/flows/:id)
