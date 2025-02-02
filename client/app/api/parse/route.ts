@@ -9,20 +9,17 @@ For simple responses or statements, return an empty actions array.
 
 Your response must be a valid JSON object.
 
-Examples where actions are needed:
-1. When offering multiple choices - use "suggestions" type
-2. When asking for confirmation - use "button" type
-3. When suggesting next steps - use "suggestions" type
-4. When providing options for further exploration - use "suggestions" type
+When the AI message contains multiple options or suggestions for the user to choose from,
+return them as clickable suggestions that the user can select to continue the conversation.
 
 Example JSON responses:
 
-For a message offering choices:
+For a message with suggestions:
 {
   "actions": [
     {
       "type": "suggestions",
-      "items": ["First Option", "Second Option", "Third Option"]
+      "items": ["Tell me more about option 1", "I want to learn about option 2"]
     }
   ]
 }
@@ -50,7 +47,8 @@ For a simple response with no actions needed:
   "actions": []
 }
 
-Analyze the message content and return appropriate JSON with actions if needed.`;
+Important: Always return an array of actions, even if there's only one action type.
+Each suggestion should be a complete, natural response that the user might say.`;
 
 const actionSchema = z.object({
   actions: z.array(
@@ -93,27 +91,35 @@ export async function POST(request: Request) {
 
     console.log('OpenAI Response:', completion.choices[0].message.content);
     
-    const parsedActions = JSON.parse(completion.choices[0].message.content || '') as {
-      actions: MessageActions['actions'];
+    const rawResponse = JSON.parse(completion.choices[0].message.content || '');
+    
+    // Transform the response to match our expected format
+    const parsedActions = {
+      actions: Array.isArray(rawResponse.actions) 
+        ? rawResponse.actions 
+        : [rawResponse.actions].filter(Boolean)
     };
 
-    console.log('Parsed Actions:', parsedActions);
+    console.log('Transformed Actions:', parsedActions);
     
     const parsed = actionSchema.safeParse(parsedActions);
     if (!parsed.success) {
       console.error('Invalid actions format:', parsed.error);
-      return NextResponse.json({ error: "Invalid actions format" }, { status: 400 });
+      return NextResponse.json({
+        messageId,
+        actions: [] // Return empty actions on validation failure
+      });
     }
 
     return NextResponse.json({
       messageId,
-      actions: parsedActions.actions,
+      actions: parsed.data.actions,
     });
   } catch (error) {
     console.error('[Parse API Error]:', error);
-    return NextResponse.json(
-      { error: 'Failed to parse message' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      // messageId,
+      actions: []
+    });
   }
 } 

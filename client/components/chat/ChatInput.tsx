@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 interface ChatInputProps {
   value: string
   onChange: (value: string) => void
-  onSubmit: () => void
+  onSubmit: (value?: string) => void
   isLoading?: boolean
 }
 
@@ -53,7 +53,7 @@ export function ChatInput({ value, onChange, onSubmit, isLoading }: ChatInputPro
       <Button
         size="icon"
         className="absolute bottom-2 right-2 h-8 w-8 rounded-lg bg-blue-600 hover:bg-blue-700"
-        onClick={onSubmit}
+        onClick={() => onSubmit()}
         disabled={isLoading || !value.trim()}
       >
         <SendHorizontal className="h-4 w-4" />

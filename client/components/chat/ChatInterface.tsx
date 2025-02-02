@@ -24,26 +24,27 @@ export function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const handleSubmit = async () => {
-    if (!input.trim() || isLoading) return
+  const handleSubmit = async (userInput?: string) => {
+    const finalInput = userInput || input;
+    if (!finalInput.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content: finalInput,
       role: "user",
-    }
+    };
 
-    setMessages(prev => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
-    setErrors({}) // Clear previous errors
+    setMessages(prev => [...prev, userMessage]);
+    setInput(""); // Clear input field
+    setIsLoading(true);
+    setErrors({});
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
-      })
+        body: JSON.stringify({ message: finalInput }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to send message")
@@ -80,17 +81,13 @@ export function ChatInterface() {
   }
 
   const handleActionClick = async (action: string) => {
-    // If it's a suggestion, strip the 'suggest:' prefix
+    // Extract the suggestion text without the prefix
     const message = action.startsWith('suggest:') 
       ? action.replace('suggest:', '') 
       : action;
 
-    // Set the message as input and submit it
-    setInput(message);
-    // We need to wrap this in a setTimeout to ensure the input is set before submitting
-    setTimeout(() => {
-      handleSubmit();
-    }, 0);
+    // Submit the message directly instead of setting input
+    await handleSubmit(message);
   }
 
   return (
