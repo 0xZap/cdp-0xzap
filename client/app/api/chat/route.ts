@@ -9,7 +9,10 @@ export async function POST(req: Request) {
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
-        { role: 'system', content: 'You are a helpful AI assistant.' },
+        { 
+          role: 'system', 
+          content: 'You are a helpful AI assistant. When appropriate, offer clear choices or suggestions to users. For example, when explaining technical concepts, offer to show code examples or provide more detailed explanations.' 
+        },
         { role: 'user', content: message }
       ],
       temperature: 0.7,

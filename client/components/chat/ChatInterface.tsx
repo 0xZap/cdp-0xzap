@@ -17,9 +17,12 @@ export function ChatInterface() {
       role: "assistant",
     },
   ])
-  const [messageActions, setMessageActions] = useState<Record<string, MessageActions>>({})
+  const [messageActions, setMessageActions] = useState<Record<string, MessageActions>>({
+    "1": { messageId: "1", actions: [] }
+  })
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return
@@ -33,6 +36,7 @@ export function ChatInterface() {
     setMessages(prev => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
+    setErrors({}) // Clear previous errors
 
     try {
       const response = await fetch("/api/chat", {
@@ -49,14 +53,26 @@ export function ChatInterface() {
       setMessages(prev => [...prev, aiMessage])
 
       // Parse the AI message for actions
-      const actions = await parseMessage(aiMessage.content, aiMessage.id)
-      if (actions) {
-        setMessageActions(prev => ({
+      try {
+        const actions = await parseMessage(aiMessage.content, aiMessage.id)
+        if (actions) {
+          console.log('Setting actions for:', aiMessage.id, actions);
+          setMessageActions(prev => ({
+            ...prev,
+            [aiMessage.id]: actions,
+          }))
+        }
+      } catch (parseError) {
+        setErrors(prev => ({
           ...prev,
-          [aiMessage.id]: actions,
+          [aiMessage.id]: "Failed to analyze message for actions"
         }))
       }
     } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        general: "Failed to send message"
+      }))
       console.error("Failed to send message:", error)
     } finally {
       setIsLoading(false)
@@ -64,8 +80,17 @@ export function ChatInterface() {
   }
 
   const handleActionClick = async (action: string) => {
-    // Handle action clicks here
-    console.log("Action clicked:", action)
+    // If it's a suggestion, strip the 'suggest:' prefix
+    const message = action.startsWith('suggest:') 
+      ? action.replace('suggest:', '') 
+      : action;
+
+    // Set the message as input and submit it
+    setInput(message);
+    // We need to wrap this in a setTimeout to ensure the input is set before submitting
+    setTimeout(() => {
+      handleSubmit();
+    }, 0);
   }
 
   return (
@@ -78,7 +103,13 @@ export function ChatInterface() {
               message={message}
               actions={messageActions[message.id]}
               onActionClick={handleActionClick}
-              isParsing={!messageActions[message.id] && message.role === 'assistant'}
+              isParsing={
+                !messageActions[message.id] && 
+                message.role === 'assistant' && 
+                message.id !== "1"
+              }
+              isLoading={isLoading && message.id === messages[messages.length - 1]?.id}
+              error={errors[message.id]}
             />
           ))}
         </div>

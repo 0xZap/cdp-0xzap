@@ -22,6 +22,8 @@ export async function parseMessage(
   messageId: string
 ): Promise<MessageActions | null> {
   try {
+    console.log('Sending for parsing:', { content, messageId });
+    
     const response = await fetch("/api/parse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -29,10 +31,14 @@ export async function parseMessage(
     });
 
     if (!response.ok) {
+      console.error('Parse API error:', await response.text());
       return null;
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log('Received parse result:', result);
+    
+    return result;
   } catch (error) {
     console.error("Failed to parse message:", error);
     return { 

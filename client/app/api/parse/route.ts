@@ -3,41 +3,54 @@ import { NextResponse } from 'next/server';
 import { MessageActions } from '@/types/chat';
 import { z } from 'zod';
 
-const SYSTEM_PROMPT = `You are an AI that analyzes chat messages and generates UI actions.
-Your task is to return ONLY a JSON object containing appropriate UI actions based on the message content.
-The JSON must follow this TypeScript type:
+const SYSTEM_PROMPT = `You are an AI that analyzes chat messages and determines if UI actions are needed.
+Only return actions if the message clearly requires user interaction or choices.
+For simple responses or statements, return an empty actions array.
 
-type ActionType = {
-  type: "button" | "suggestions" | "confirm";
-  label?: string;
-  action?: string;
-  variant?: "default" | "primary" | "destructive" | "ghost";
-  items?: string[];
-  title?: string;
-  description?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
+Your response must be a valid JSON object.
+
+Examples where actions are needed:
+1. When offering multiple choices - use "suggestions" type
+2. When asking for confirmation - use "button" type
+3. When suggesting next steps - use "suggestions" type
+4. When providing options for further exploration - use "suggestions" type
+
+Example JSON responses:
+
+For a message offering choices:
+{
+  "actions": [
+    {
+      "type": "suggestions",
+      "items": ["First Option", "Second Option", "Third Option"]
+    }
+  ]
 }
 
-type Response = {
-  actions: ActionType[];
-}
-
-Example response:
+For a message requiring confirmation:
 {
   "actions": [
     {
       "type": "button",
-      "label": "Show Code",
-      "action": "show_code",
+      "label": "Confirm",
+      "action": "Yes, proceed with the changes",
       "variant": "primary"
     },
     {
-      "type": "suggestions",
-      "items": ["Option 1", "Option 2"]
+      "type": "button",
+      "label": "Cancel",
+      "action": "No, let's try something else",
+      "variant": "destructive"
     }
   ]
-}`;
+}
+
+For a simple response with no actions needed:
+{
+  "actions": []
+}
+
+Analyze the message content and return appropriate JSON with actions if needed.`;
 
 const actionSchema = z.object({
   actions: z.array(
@@ -66,6 +79,7 @@ const actionSchema = z.object({
 export async function POST(request: Request) {
   try {
     const { content, messageId } = await request.json();
+    console.log('Parsing message:', { content, messageId });
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
@@ -77,10 +91,14 @@ export async function POST(request: Request) {
       response_format: { type: 'json_object' },
     });
 
+    console.log('OpenAI Response:', completion.choices[0].message.content);
+    
     const parsedActions = JSON.parse(completion.choices[0].message.content || '') as {
       actions: MessageActions['actions'];
     };
 
+    console.log('Parsed Actions:', parsedActions);
+    
     const parsed = actionSchema.safeParse(parsedActions);
     if (!parsed.success) {
       console.error('Invalid actions format:', parsed.error);
