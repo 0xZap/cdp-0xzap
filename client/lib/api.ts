@@ -35,6 +35,9 @@ export async function parseMessage(
     return response.json();
   } catch (error) {
     console.error("Failed to parse message:", error);
-    return null;
+    return { 
+      messageId,
+      actions: []
+    };
   }
-} 
+}

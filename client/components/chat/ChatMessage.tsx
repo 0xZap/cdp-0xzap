@@ -10,9 +10,10 @@ interface ChatMessageProps {
   message: Message
   actions?: MessageActions
   onActionClick?: (action: string) => void
+  isParsing?: boolean
 }
 
-export function ChatMessage({ message, actions, onActionClick }: ChatMessageProps) {
+export function ChatMessage({ message, actions, onActionClick, isParsing }: ChatMessageProps) {
   return (
     <div className={cn("flex gap-4", message.role === "user" && "flex-row-reverse")}>
       <Avatar className="h-8 w-8 shrink-0">
@@ -71,6 +72,7 @@ export function ChatMessage({ message, actions, onActionClick }: ChatMessageProp
         {actions && onActionClick && (
           <ChatActions actions={actions} onActionClick={onActionClick} />
         )}
+        {isParsing && <div className="text-xs text-zinc-500 mt-2">Generating actions...</div>}
       </div>
     </div>
   )
