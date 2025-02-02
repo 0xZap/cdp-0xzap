@@ -22,9 +22,9 @@ When you see an opportunity for user interaction (like offering choices, next st
 - "It sounds like you feel strongly positive about this proposal..."
 
 Do NOT return JSON or code blocks here—just normal text. Our second-step service will parse your final text to generate dynamic UI components.
-`
+`,
         },
-        { role: "user", content: message }
+        { role: "user", content: message },
       ],
       temperature: 0.7,
       max_tokens: 500,
@@ -36,12 +36,14 @@ Do NOT return JSON or code blocks here—just normal text. Our second-step servi
       role: "assistant",
     };
 
+    console.log("[Chat Response]", responseMessage);
+
     return NextResponse.json(responseMessage);
   } catch (error) {
     console.error("[Chat Error]", error);
     return NextResponse.json(
       { error: "Failed to process message" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
